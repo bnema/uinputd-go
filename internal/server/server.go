@@ -7,6 +7,8 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/user"
+	"strconv"
 
 	"github.com/bnema/uinputd-go/internal/config"
 	"github.com/bnema/uinputd-go/internal/layouts"
@@ -143,44 +145,24 @@ func (s *Server) sendError(conn net.Conn, err error) error {
 
 // setSocketGroup attempts to set the socket's group to 'input'.
 func setSocketGroup(path string) error {
-	// Look up 'input' group
-	inputGID := lookupInputGroup()
-	if inputGID == -1 {
+	// Look up 'input' group using standard library
+	group, err := user.LookupGroup("input")
+	if err != nil {
 		return fmt.Errorf("input group not found")
 	}
 
-	// Change group ownership: -1 means don't change UID
-	return os.Chown(path, -1, inputGID)
-}
-
-// lookupInputGroup finds the GID of the 'input' group.
-// Returns -1 if not found.
-func lookupInputGroup() int {
-	// Try to read /etc/group to find input group
-	// This is a simple implementation; could use cgo for getgrnam()
-	file, err := os.Open("/etc/group")
+	// Convert GID string to int
+	gid, err := strconv.Atoi(group.Gid)
 	if err != nil {
-		return -1
-	}
-	defer file.Close()
-
-	var line string
-	for {
-		_, err := fmt.Fscanln(file, &line)
-		if err != nil {
-			break
-		}
-		// Parse line: groupname:x:GID:users
-		var name string
-		var gid int
-		if n, _ := fmt.Sscanf(line, "%[^:]:%*[^:]:%d", &name, &gid); n == 2 {
-			if name == "input" {
-				return gid
-			}
-		}
+		return fmt.Errorf("invalid group ID: %w", err)
 	}
 
-	return -1
+	// Change group ownership: -1 means don't change UID
+	if err := os.Chown(path, -1, gid); err != nil {
+		return fmt.Errorf("failed to set group ownership: %w", err)
+	}
+
+	return nil
 }
 
 // Close cleanly shuts down the server.
