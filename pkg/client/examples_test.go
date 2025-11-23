@@ -58,8 +58,8 @@ func Example_streaming() {
 	// Stream text with delays (useful for voice-to-text integration)
 	err = c.StreamText(ctx, "This text appears word by word", &client.StreamOptions{
 		Layout:    "us",
-		DelayMs:   50,  // 50ms delay between words
-		CharDelay: 10,  // 10ms delay between characters
+		DelayMs:   50, // 50ms delay between words
+		CharDelay: 10, // 10ms delay between characters
 	})
 	if err != nil {
 		log.Fatal(err)

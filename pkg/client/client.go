@@ -85,7 +85,7 @@ func New(socketPath string, opts *Options) (*Client, error) {
 
 // NewDefault creates a client with the default socket path.
 func NewDefault() (*Client, error) {
-	return New("/tmp/.uinputd.sock", nil)
+	return New("/run/uinputd.sock", nil)
 }
 
 // connect establishes a connection to the daemon.
