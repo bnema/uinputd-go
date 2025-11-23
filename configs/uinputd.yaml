@@ -1,0 +1,33 @@
+# uinputd configuration file
+# Place in: /etc/uinputd/uinputd.yaml or ~/.config/uinputd/uinputd.yaml
+
+# Unix socket configuration
+socket:
+  # Socket path (default: $XDG_RUNTIME_DIR/uinputd.sock or /tmp/.uinputd.sock)
+  path: /tmp/.uinputd.sock
+  # Socket file permissions (octal, default: 0600)
+  permissions: 0600
+
+# Default keyboard layout
+# Supported: us, fr (more layouts coming soon)
+layout: us
+
+# Performance tuning
+performance:
+  # Internal buffer size for socket communication (bytes)
+  buffer_size: 4096
+  # Maximum message size (bytes, default: 1MB)
+  max_message_size: 1048576
+  # Delay between words in streaming mode (milliseconds)
+  stream_delay_ms: 50
+  # Delay between characters in char-by-char mode (milliseconds)
+  char_delay_ms: 10
+  # Maximum concurrent commands being processed
+  max_concurrent_cmds: 100
+
+# Logging configuration
+logging:
+  # Log level: debug, info, warn, error, fatal
+  level: info
+  # Format: auto (TTY detection), json, text
+  format: auto
