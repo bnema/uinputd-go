@@ -41,26 +41,34 @@ uinputd-go/
 
 ## Quick Start
 
-### Build
+### Build and Install
 
 ```bash
+# Build the client (includes embedded daemon)
 make build
+
+# Install the client
+sudo make install
 ```
 
-### Install Daemon
+### Install Daemon and Service
+
+The client includes embedded installation commands:
 
 ```bash
-sudo make install-daemon
-sudo make install-systemd
-sudo systemctl start uinputd
+# Install the daemon
+sudo uinput-client install daemon
+
+# Install systemd service
+sudo uinput-client install systemd-service
+
+# Enable and start the service
 sudo systemctl enable uinputd
-```
+sudo systemctl start uinputd
 
-Or use the client's install command:
-
-```bash
-uinput-client install daemon
-uinput-client install systemd-service
+# Add your user to the input group (required for client access)
+sudo usermod -aG input $USER
+# (logout and login for group changes to take effect)
 ```
 
 ### Usage
@@ -169,9 +177,9 @@ err = c.SendKey(ctx, "KEY_ENTER", "")
 
 ```bash
 make build              # Build daemon + client
+make install            # Install client to /usr/local/bin
 make test               # Run tests
 make test-coverage      # Generate coverage report
-make install            # Install binaries
 make clean              # Clean build artifacts
 make help               # Display all targets
 ```
