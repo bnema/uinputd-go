@@ -3,10 +3,10 @@
 
 # Unix socket configuration
 socket:
-  # Socket path (default: $XDG_RUNTIME_DIR/uinputd.sock or /tmp/.uinputd.sock)
-  path: /tmp/.uinputd.sock
-  # Socket file permissions (octal, default: 0600)
-  permissions: 0600
+  # Socket path - standard location for system daemons (like /run/docker.sock)
+  path: /run/uinputd.sock
+  # Socket file permissions (octal, 0660 allows group access via 'input' group)
+  permissions: 0660
 
 # Default keyboard layout
 # Supported: us, fr (more layouts coming soon)
