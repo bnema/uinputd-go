@@ -5,25 +5,25 @@ import "github.com/charmbracelet/lipgloss"
 // Nerd Font symbols using Unicode
 const (
 	// Status symbols
-	IconSuccess    = "\uf00c" // nf-fa-check
-	IconError      = "\uf00d" // nf-fa-times
-	IconWarning    = "\uf071" // nf-fa-exclamation_triangle
-	IconInfo       = "\uf05a" // nf-fa-info_circle
-	IconQuestion   = "\uf059" // nf-fa-question_circle
+	IconSuccess  = "\uf00c" // nf-fa-check
+	IconError    = "\uf00d" // nf-fa-times
+	IconWarning  = "\uf071" // nf-fa-exclamation_triangle
+	IconInfo     = "\uf05a" // nf-fa-info_circle
+	IconQuestion = "\uf059" // nf-fa-question_circle
 
 	// Action symbols
-	IconLock       = "\uf023" // nf-fa-lock
-	IconUnlock     = "\uf09c" // nf-fa-unlock
-	IconInstall    = "\uf019" // nf-fa-download
-	IconUninstall  = "\uf1f8" // nf-fa-trash
-	IconConfig     = "\uf013" // nf-fa-cog
-	IconKey        = "\uf084" // nf-fa-key
+	IconLock      = "\uf023" // nf-fa-lock
+	IconUnlock    = "\uf09c" // nf-fa-unlock
+	IconInstall   = "\uf019" // nf-fa-download
+	IconUninstall = "\uf1f8" // nf-fa-trash
+	IconConfig    = "\uf013" // nf-fa-cog
+	IconKey       = "\uf084" // nf-fa-key
 
 	// System symbols
-	IconDaemon     = "\uf013" // nf-fa-cog
-	IconService    = "\uf233" // nf-fa-server
-	IconTerminal   = "\uf120" // nf-fa-terminal
-	IconKeyboard   = "\uf11c" // nf-fa-keyboard
+	IconDaemon   = "\uf013" // nf-fa-cog
+	IconService  = "\uf233" // nf-fa-server
+	IconTerminal = "\uf120" // nf-fa-terminal
+	IconKeyboard = "\uf11c" // nf-fa-keyboard
 
 	// Network/Connection
 	IconConnected  = "\uf0c1" // nf-fa-link
@@ -31,9 +31,9 @@ const (
 	IconSocket     = "\uf1e6" // nf-fa-plug
 
 	// Progress
-	IconSpinner    = "\uf110" // nf-fa-spinner
-	IconCheck      = "\uf00c" // nf-fa-check
-	IconCross      = "\uf00d" // nf-fa-times
+	IconSpinner = "\uf110" // nf-fa-spinner
+	IconCheck   = "\uf00c" // nf-fa-check
+	IconCross   = "\uf00d" // nf-fa-times
 
 	// Misc
 	IconBullet     = "\u2022" // bullet point
@@ -43,11 +43,11 @@ const (
 
 // Color styles
 var (
-	SuccessStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true)  // Green
-	ErrorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true)   // Red
-	WarningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)  // Yellow
-	InfoStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("12"))             // Blue
-	DimStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))              // Gray
+	SuccessStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true) // Green
+	ErrorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true)  // Red
+	WarningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true) // Yellow
+	InfoStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("12"))            // Blue
+	DimStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))             // Gray
 	BoldStyle    = lipgloss.NewStyle().Bold(true)
 )
 
