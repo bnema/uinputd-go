@@ -5,6 +5,16 @@ import (
 	"sync"
 )
 
+// Layout name constants
+const (
+	NameUS = "us" // US QWERTY
+	NameUK = "uk" // UK QWERTY
+	NameFR = "fr" // French AZERTY
+	NameDE = "de" // German QWERTZ
+	NameES = "es" // Spanish QWERTY
+	NameIT = "it" // Italian QWERTY
+)
+
 // Registry manages available keyboard layouts.
 type Registry struct {
 	mu      sync.RWMutex

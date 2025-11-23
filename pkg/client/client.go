@@ -38,7 +38,8 @@ type Options struct {
 
 // TypeOptions contains options for typing text.
 type TypeOptions struct {
-	// Layout specifies the keyboard layout (us, fr, de, es, uk, it)
+	// Layout specifies the keyboard layout
+	// Use the constants from layouts package (layouts.NameUS, layouts.NameFR, etc.)
 	// If empty, uses the daemon's default layout
 	Layout string
 }
@@ -46,6 +47,7 @@ type TypeOptions struct {
 // StreamOptions contains options for streaming text.
 type StreamOptions struct {
 	// Layout specifies the keyboard layout
+	// Use the constants from layouts package (layouts.NameUS, layouts.NameFR, etc.)
 	Layout string
 	// DelayMs is the delay between words in milliseconds
 	DelayMs int
