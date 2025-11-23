@@ -47,16 +47,16 @@ var frKeymapData = map[rune]KeyMapping{
 	'0': {Keycode: uinput.Key0, Modifier: ModShift},
 
 	// Unshifted symbols (AZERTY specific)
-	'&': {Keycode: uinput.Key1, Modifier: ModNone},
-	'é': {Keycode: uinput.Key2, Modifier: ModNone},
-	'"': {Keycode: uinput.Key3, Modifier: ModNone},
+	'&':  {Keycode: uinput.Key1, Modifier: ModNone},
+	'é':  {Keycode: uinput.Key2, Modifier: ModNone},
+	'"':  {Keycode: uinput.Key3, Modifier: ModNone},
 	'\'': {Keycode: uinput.Key4, Modifier: ModNone},
-	'(': {Keycode: uinput.Key5, Modifier: ModNone},
-	'-': {Keycode: uinput.Key6, Modifier: ModNone},
-	'è': {Keycode: uinput.Key7, Modifier: ModNone},
-	'_': {Keycode: uinput.Key8, Modifier: ModNone},
-	'ç': {Keycode: uinput.Key9, Modifier: ModNone},
-	'à': {Keycode: uinput.Key0, Modifier: ModNone},
+	'(':  {Keycode: uinput.Key5, Modifier: ModNone},
+	'-':  {Keycode: uinput.Key6, Modifier: ModNone},
+	'è':  {Keycode: uinput.Key7, Modifier: ModNone},
+	'_':  {Keycode: uinput.Key8, Modifier: ModNone},
+	'ç':  {Keycode: uinput.Key9, Modifier: ModNone},
+	'à':  {Keycode: uinput.Key0, Modifier: ModNone},
 
 	// AZERTY letter layout (first row)
 	'a': {Keycode: uinput.KeyQ, Modifier: ModNone},
@@ -131,16 +131,16 @@ var frKeymapData = map[rune]KeyMapping{
 	'!': {Keycode: uinput.KeySlash, Modifier: ModNone},
 
 	// Brackets and special (with AltGr)
-	'[': {Keycode: uinput.Key5, Modifier: ModAltGr},
-	']': {Keycode: uinput.KeyMinus, Modifier: ModAltGr},
-	'{': {Keycode: uinput.Key4, Modifier: ModAltGr},
-	'}': {Keycode: uinput.KeyEqual, Modifier: ModAltGr},
-	'@': {Keycode: uinput.Key0, Modifier: ModAltGr},
-	'#': {Keycode: uinput.Key3, Modifier: ModAltGr},
-	'~': {Keycode: uinput.Key2, Modifier: ModAltGr},
+	'[':  {Keycode: uinput.Key5, Modifier: ModAltGr},
+	']':  {Keycode: uinput.KeyMinus, Modifier: ModAltGr},
+	'{':  {Keycode: uinput.Key4, Modifier: ModAltGr},
+	'}':  {Keycode: uinput.KeyEqual, Modifier: ModAltGr},
+	'@':  {Keycode: uinput.Key0, Modifier: ModAltGr},
+	'#':  {Keycode: uinput.Key3, Modifier: ModAltGr},
+	'~':  {Keycode: uinput.Key2, Modifier: ModAltGr},
 	'\\': {Keycode: uinput.Key8, Modifier: ModAltGr},
-	'|': {Keycode: uinput.Key6, Modifier: ModAltGr},
-	'`': {Keycode: uinput.Key7, Modifier: ModAltGr},
+	'|':  {Keycode: uinput.Key6, Modifier: ModAltGr},
+	'`':  {Keycode: uinput.Key7, Modifier: ModAltGr},
 
 	// Remaining symbols
 	'°': {Keycode: uinput.KeyMinus, Modifier: ModShift},

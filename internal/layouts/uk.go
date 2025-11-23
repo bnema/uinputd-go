@@ -130,24 +130,24 @@ var ukKeymapData = map[rune]KeyMapping{
 	'?': {Keycode: uinput.KeySlash, Modifier: ModShift},
 
 	// UK specific symbols
-	'-': {Keycode: uinput.KeyMinus, Modifier: ModNone},
-	'_': {Keycode: uinput.KeyMinus, Modifier: ModShift},
-	'=': {Keycode: uinput.KeyEqual, Modifier: ModNone},
-	'+': {Keycode: uinput.KeyEqual, Modifier: ModShift},
-	'[': {Keycode: uinput.KeyLeftBrace, Modifier: ModNone},
-	'{': {Keycode: uinput.KeyLeftBrace, Modifier: ModShift},
-	']': {Keycode: uinput.KeyRightBrace, Modifier: ModNone},
-	'}': {Keycode: uinput.KeyRightBrace, Modifier: ModShift},
-	';': {Keycode: uinput.KeySemicolon, Modifier: ModNone},
-	':': {Keycode: uinput.KeySemicolon, Modifier: ModShift},
+	'-':  {Keycode: uinput.KeyMinus, Modifier: ModNone},
+	'_':  {Keycode: uinput.KeyMinus, Modifier: ModShift},
+	'=':  {Keycode: uinput.KeyEqual, Modifier: ModNone},
+	'+':  {Keycode: uinput.KeyEqual, Modifier: ModShift},
+	'[':  {Keycode: uinput.KeyLeftBrace, Modifier: ModNone},
+	'{':  {Keycode: uinput.KeyLeftBrace, Modifier: ModShift},
+	']':  {Keycode: uinput.KeyRightBrace, Modifier: ModNone},
+	'}':  {Keycode: uinput.KeyRightBrace, Modifier: ModShift},
+	';':  {Keycode: uinput.KeySemicolon, Modifier: ModNone},
+	':':  {Keycode: uinput.KeySemicolon, Modifier: ModShift},
 	'\'': {Keycode: uinput.KeyApostrophe, Modifier: ModNone},
-	'@': {Keycode: uinput.KeyApostrophe, Modifier: ModShift}, // UK @ is shifted '
-	'#': {Keycode: uinput.KeyBackslash, Modifier: ModNone},   // UK hash on backslash key
-	'~': {Keycode: uinput.KeyBackslash, Modifier: ModShift},
-	'`': {Keycode: uinput.KeyGrave, Modifier: ModNone},
-	'¬': {Keycode: uinput.KeyGrave, Modifier: ModShift}, // UK not sign
-	'\\': {Keycode: uinput.Key102ND, Modifier: ModNone}, // UK backslash on 102nd key
-	'|': {Keycode: uinput.Key102ND, Modifier: ModShift},
+	'@':  {Keycode: uinput.KeyApostrophe, Modifier: ModShift}, // UK @ is shifted '
+	'#':  {Keycode: uinput.KeyBackslash, Modifier: ModNone},   // UK hash on backslash key
+	'~':  {Keycode: uinput.KeyBackslash, Modifier: ModShift},
+	'`':  {Keycode: uinput.KeyGrave, Modifier: ModNone},
+	'¬':  {Keycode: uinput.KeyGrave, Modifier: ModShift}, // UK not sign
+	'\\': {Keycode: uinput.Key102ND, Modifier: ModNone},  // UK backslash on 102nd key
+	'|':  {Keycode: uinput.Key102ND, Modifier: ModShift},
 
 	// AltGr combinations (Euro sign)
 	'€': {Keycode: uinput.Key4, Modifier: ModAltGr},

@@ -141,15 +141,15 @@ var itKeymapData = map[rune]KeyMapping{
 
 	// Symbols
 	'\'': {Keycode: uinput.KeyMinus, Modifier: ModNone},
-	'?': {Keycode: uinput.KeyMinus, Modifier: ModShift},
-	'ì': {Keycode: uinput.KeyEqual, Modifier: ModNone},
-	'^': {Keycode: uinput.KeyEqual, Modifier: ModShift},
-	'+': {Keycode: uinput.KeyRightBrace, Modifier: ModNone},
-	'*': {Keycode: uinput.KeyRightBrace, Modifier: ModShift},
+	'?':  {Keycode: uinput.KeyMinus, Modifier: ModShift},
+	'ì':  {Keycode: uinput.KeyEqual, Modifier: ModNone},
+	'^':  {Keycode: uinput.KeyEqual, Modifier: ModShift},
+	'+':  {Keycode: uinput.KeyRightBrace, Modifier: ModNone},
+	'*':  {Keycode: uinput.KeyRightBrace, Modifier: ModShift},
 	'\\': {Keycode: uinput.KeyGrave, Modifier: ModNone},
-	'|': {Keycode: uinput.KeyGrave, Modifier: ModShift},
-	'<': {Keycode: uinput.Key102ND, Modifier: ModNone},
-	'>': {Keycode: uinput.Key102ND, Modifier: ModShift},
+	'|':  {Keycode: uinput.KeyGrave, Modifier: ModShift},
+	'<':  {Keycode: uinput.Key102ND, Modifier: ModNone},
+	'>':  {Keycode: uinput.Key102ND, Modifier: ModShift},
 
 	// AltGr combinations
 	'@': {Keycode: uinput.KeyApostrophe, Modifier: ModAltGr},
