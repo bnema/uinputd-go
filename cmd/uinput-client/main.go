@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/bnema/uinputd-go/internal/doctor"
+	"github.com/bnema/uinputd-go/internal/installer"
 	"github.com/bnema/uinputd-go/internal/protocol"
 	"github.com/bnema/uinputd-go/internal/styles"
 	"github.com/spf13/cobra"
@@ -24,7 +26,10 @@ var embeddedConfig []byte
 var embeddedSystemd []byte
 
 var (
-	version    = "dev"
+	version   = "dev"
+	commit    = "unknown"
+	buildTime = "unknown"
+
 	socketPath string
 	layout     string
 )
@@ -55,7 +60,7 @@ Examples:
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&socketPath, "socket", "s", "/tmp/.uinputd.sock", "socket path")
+	rootCmd.PersistentFlags().StringVarP(&socketPath, "socket", "s", "/run/uinputd.sock", "socket path")
 	rootCmd.PersistentFlags().StringVarP(&layout, "layout", "l", "", "keyboard layout (us, fr, de, es, uk, it)")
 }
 
@@ -108,12 +113,31 @@ The daemon must be installed first. Requires root privileges.`,
 	RunE: runInstallSystemd,
 }
 
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print version information",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("uinput-client %s\n", version)
+		fmt.Printf("  commit:     %s\n", commit)
+		fmt.Printf("  build time: %s\n", buildTime)
+	},
+}
+
+var doctorCmd = &cobra.Command{
+	Use:   "doctor",
+	Short: "Check system health and configuration",
+	Long:  `Run health checks to verify uinputd installation and configuration.`,
+	RunE:  runDoctor,
+}
+
 func init() {
 	rootCmd.AddCommand(typeCmd)
 	rootCmd.AddCommand(streamCmd)
 	rootCmd.AddCommand(keyCmd)
 	rootCmd.AddCommand(pingCmd)
 	rootCmd.AddCommand(installCmd)
+	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(doctorCmd)
 
 	installCmd.AddCommand(installDaemonCmd)
 	installCmd.AddCommand(installSystemdCmd)
@@ -240,42 +264,28 @@ func runInstallDaemon(cmd *cobra.Command, args []string) error {
 
 	fmt.Println(styles.Info("Installing uinputd daemon..."))
 
-	// Write daemon binary
-	daemonPath := "/usr/local/bin/uinputd"
-	if err := os.WriteFile(daemonPath, embeddedDaemon, 0755); err != nil {
-		return fmt.Errorf("failed to write daemon: %w", err)
+	// Use installer package for installation logic
+	if err := installer.InstallDaemon(embeddedDaemon, embeddedConfig); err != nil {
+		return err
 	}
 
-	fmt.Println(styles.Success("Daemon installed: " + daemonPath))
-
-	// Create config directory
-	configDir := "/etc/uinputd"
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
+	// Get the username that was added to the group
+	username, err := installer.GetInstalledUsername()
+	if err != nil {
+		username = "your-user"
 	}
 
-	// Install default config if it doesn't exist
-	configPath := configDir + "/uinputd.yaml"
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		if err := os.WriteFile(configPath, embeddedConfig, 0644); err != nil {
-			return fmt.Errorf("failed to write config: %w", err)
-		}
-
-		fmt.Println(styles.Success("Config installed: " + configPath))
-	} else {
-		fmt.Println(styles.Info("Config already exists: " + configPath))
-	}
-
-	// Try to set group ownership to 'input'
-	if err := setInputGroup(daemonPath); err != nil {
-		fmt.Println(styles.Warning("Could not set input group: " + err.Error()))
-	}
+	fmt.Println(styles.Success("Daemon installed: /usr/local/bin/uinputd"))
+	fmt.Println(styles.Success("Config installed: /etc/uinputd/uinputd.yaml"))
+	fmt.Println(styles.Success(fmt.Sprintf("User '%s' added to 'input' group", username)))
 
 	fmt.Println(styles.Section("Installation complete!"))
 	fmt.Println(styles.Bold("Next steps:"))
 	fmt.Println(styles.Step(1, "Install systemd service: sudo uinput-client install systemd-service"))
 	fmt.Println(styles.Step(2, "Enable service:           sudo systemctl enable uinputd"))
 	fmt.Println(styles.Step(3, "Start service:            sudo systemctl start uinputd"))
+	fmt.Println(styles.Step(4, fmt.Sprintf("Activate group (no logout): newgrp input")))
+	fmt.Println(styles.Dim("  (or logout and login for group changes to take effect)"))
 
 	return nil
 }
@@ -288,44 +298,60 @@ func runInstallSystemd(cmd *cobra.Command, args []string) error {
 
 	fmt.Println(styles.Info("Installing systemd service..."))
 
-	// Check if daemon is installed
-	daemonPath := "/usr/local/bin/uinputd"
-	if _, err := os.Stat(daemonPath); os.IsNotExist(err) {
-		return fmt.Errorf("daemon not found at %s\nInstall it first: uinput-client install daemon", daemonPath)
+	// Use installer package for installation logic
+	if err := installer.InstallSystemdService(embeddedSystemd); err != nil {
+		return err
 	}
 
-	// Write service file
-	servicePath := "/etc/systemd/system/uinputd.service"
-	if err := os.WriteFile(servicePath, embeddedSystemd, 0644); err != nil {
-		return fmt.Errorf("failed to write service file: %w", err)
-	}
-
-	fmt.Println(styles.Success("Service installed: " + servicePath))
-
-	// Reload systemd
-	fmt.Println(styles.Info("Reloading systemd..."))
-	reloadCmd := exec.Command("systemctl", "daemon-reload")
-	if err := reloadCmd.Run(); err != nil {
-		return fmt.Errorf("failed to reload systemd: %w", err)
-	}
-
+	fmt.Println(styles.Success("Service installed: /etc/systemd/system/uinputd.service"))
 	fmt.Println(styles.Success("Systemd reloaded"))
+
 	fmt.Println(styles.Section("Systemd service installed!"))
 	fmt.Println(styles.Bold("Next steps:"))
-	fmt.Println(styles.ListItem("Enable service: sudo systemctl enable uinputd"))
-	fmt.Println(styles.ListItem("Start service:  sudo systemctl start uinputd"))
-	fmt.Println(styles.ListItem("Check status:   systemctl status uinputd"))
-	fmt.Println(styles.Section("User Configuration"))
-	fmt.Println(styles.Info("Add your user to the 'input' group to use the client:"))
-	fmt.Println(styles.ListItem("sudo usermod -aG input $USER"))
-	fmt.Println(styles.Dim("  (logout and login again for group changes to take effect)"))
+	fmt.Println(styles.ListItem("Enable and start: sudo systemctl enable --now uinputd"))
+	fmt.Println(styles.ListItem("Check status:     systemctl status uinputd"))
+	fmt.Println(styles.ListItem("Verify setup:     uinput-client doctor"))
 
 	return nil
 }
 
-// setInputGroup attempts to set the group ownership to 'input' (GID typically 104 or similar)
-func setInputGroup(path string) error {
-	// This is a best-effort attempt; errors are non-fatal
-	cmd := exec.Command("chgrp", "input", path)
-	return cmd.Run()
+func runDoctor(cmd *cobra.Command, args []string) error {
+	fmt.Println(styles.Section("Running health checks..."))
+	fmt.Println()
+
+	results := doctor.CheckAll(socketPath)
+
+	// Print results
+	for _, result := range results {
+		switch result.Status {
+		case doctor.StatusOK:
+			fmt.Println(styles.Success(result.Name))
+			fmt.Printf("  %s\n", styles.Dim(result.Message))
+		case doctor.StatusWarning:
+			fmt.Println(styles.Warning(result.Name))
+			fmt.Printf("  %s\n", result.Message)
+			if result.Fix != "" {
+				fmt.Printf("  %s %s\n", styles.Dim("Fix:"), result.Fix)
+			}
+		case doctor.StatusError:
+			fmt.Println(styles.Error(result.Name))
+			fmt.Printf("  %s\n", result.Message)
+			if result.Fix != "" {
+				fmt.Printf("  %s %s\n", styles.Dim("Fix:"), result.Fix)
+			}
+		}
+		fmt.Println()
+	}
+
+	// Summary
+	if doctor.HasErrors(results) {
+		fmt.Println(styles.Error("Some checks failed. Please fix the errors above."))
+		return fmt.Errorf("health checks failed")
+	} else if doctor.HasWarnings(results) {
+		fmt.Println(styles.Warning("All critical checks passed, but there are warnings."))
+	} else {
+		fmt.Println(styles.Success("All checks passed! Your uinputd setup is healthy."))
+	}
+
+	return nil
 }
