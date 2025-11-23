@@ -21,13 +21,13 @@ import (
 // Server manages the Unix socket server and handles client connections.
 type Server struct {
 	cfg      *config.Config
-	device   *uinput.Device
-	registry *layouts.Registry
+	device   uinput.DeviceInterface
+	registry layouts.RegistryInterface
 	listener net.Listener
 }
 
 // New creates a new server instance.
-func New(ctx context.Context, cfg *config.Config, device *uinput.Device) (*Server, error) {
+func New(ctx context.Context, cfg *config.Config, device uinput.DeviceInterface) (*Server, error) {
 	log := logger.LogFromCtx(ctx)
 
 	// Remove existing socket if it exists

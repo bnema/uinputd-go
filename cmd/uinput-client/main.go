@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/bnema/uinputd-go/internal/doctor"
@@ -30,8 +32,10 @@ var (
 	commit    = "unknown"
 	buildTime = "unknown"
 
-	socketPath string
-	layout     string
+	socketPath  string
+	layout      string
+	charDelayMs int
+	wordDelayMs int
 )
 
 func main() {
@@ -50,7 +54,17 @@ to send keyboard input automation commands.
 Examples:
   uinput-client type "Hello, world!"
   uinput-client type --layout fr "Bonjour!"
-  uinput-client stream < input.txt
+
+  # Stream text from stdin with natural typing delays
+  echo "Hello from stdin" | uinput-client stream
+  cat document.txt | uinput-client stream --layout fr
+
+  # SimulStreaming integration (filter timestamps, then stream)
+  simulstreaming_output | awk '{$1=$2=""; print substr($0,3)}' | uinput-client stream --layout fr
+
+  # Custom delays
+  echo "Slow typing" | uinput-client stream --char-delay 100 --word-delay 300
+
   uinput-client key 28  # Send Enter key (keycode 28)
 
   # Installation
@@ -72,9 +86,9 @@ var typeCmd = &cobra.Command{
 }
 
 var streamCmd = &cobra.Command{
-	Use:   "stream TEXT",
-	Short: "Stream text in real-time",
-	Args:  cobra.ExactArgs(1),
+	Use:   "stream",
+	Short: "Stream text from stdin with real-time delays",
+	Args:  cobra.MaximumNArgs(0),
 	RunE:  runStream,
 }
 
@@ -141,6 +155,10 @@ func init() {
 
 	installCmd.AddCommand(installDaemonCmd)
 	installCmd.AddCommand(installSystemdCmd)
+
+	// Stream command flags
+	streamCmd.Flags().IntVar(&charDelayMs, "char-delay", 0, "delay between characters in ms (0=use config default)")
+	streamCmd.Flags().IntVar(&wordDelayMs, "word-delay", 0, "delay between words in ms (0=use config default)")
 }
 
 func runType(cmd *cobra.Command, args []string) error {
@@ -155,11 +173,35 @@ func runType(cmd *cobra.Command, args []string) error {
 }
 
 func runStream(cmd *cobra.Command, args []string) error {
-	text := args[0]
+	// Read from stdin and accumulate lines into continuous text
+	var buffer strings.Builder
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) > 0 {
+			// Add space before if buffer not empty to join segments
+			if buffer.Len() > 0 {
+				buffer.WriteString(" ")
+			}
+			buffer.WriteString(line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("reading stdin: %w", err)
+	}
+
+	text := strings.TrimSpace(buffer.String())
+	if text == "" {
+		return nil // Empty input, nothing to do
+	}
 
 	payload := protocol.StreamPayload{
-		Text:   text,
-		Layout: layout,
+		Text:      text,
+		Layout:    layout,
+		DelayMs:   wordDelayMs,
+		CharDelay: charDelayMs,
 	}
 
 	return sendCommand(protocol.CommandType_Stream, payload)

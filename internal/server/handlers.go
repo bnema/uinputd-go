@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/bnema/uinputd-go/internal/layouts"
 	"github.com/bnema/uinputd-go/internal/logger"
@@ -76,11 +78,90 @@ func (s *Server) handleType(ctx context.Context, payload json.RawMessage) error 
 	return nil
 }
 
-// handleStream processes real-time streaming command.
+// handleStream processes real-time streaming command with natural typing delays.
 func (s *Server) handleStream(ctx context.Context, payload json.RawMessage) error {
-	// For now, handleStream is identical to handleType
-	// In Phase 4, we'll add proper streaming with delays
-	return s.handleType(ctx, payload)
+	log := logger.LogFromCtx(ctx)
+
+	var p protocol.StreamPayload
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return fmt.Errorf("invalid stream payload: %w", err)
+	}
+
+	// Get layout (use config default if not specified)
+	layoutName := p.Layout
+	if layoutName == "" {
+		layoutName = s.cfg.Layout
+	}
+
+	layout, err := s.registry.Get(layoutName)
+	if err != nil {
+		return fmt.Errorf("layout error: %w", err)
+	}
+
+	// Get delays (use config defaults if not specified)
+	charDelay := time.Duration(p.CharDelay) * time.Millisecond
+	if p.CharDelay == 0 {
+		charDelay = time.Duration(s.cfg.Performance.CharDelayMs) * time.Millisecond
+	}
+
+	wordDelay := time.Duration(p.DelayMs) * time.Millisecond
+	if p.DelayMs == 0 {
+		wordDelay = time.Duration(s.cfg.Performance.StreamDelayMs) * time.Millisecond
+	}
+
+	log.Info("streaming text", "length", len(p.Text), "layout", layoutName, "char_delay_ms", charDelay.Milliseconds(), "word_delay_ms", wordDelay.Milliseconds())
+
+	// Split text into words for word-level delays
+	words := strings.Fields(p.Text)
+
+	for i, word := range words {
+		// Type each character in the word
+		for _, char := range word {
+			sequence, err := layout.CharToKeySequence(ctx, char)
+			if err != nil {
+				log.Warn("character not supported", "char", string(char), "error", err)
+				continue // Skip unsupported characters
+			}
+
+			// Send each keystroke in the sequence
+			for _, key := range sequence {
+				shift := (key.Modifier & layouts.ModShift) != 0
+				altGr := (key.Modifier & layouts.ModAltGr) != 0
+
+				if err := s.sendKeyWithModifiers(ctx, key.Keycode, shift, altGr); err != nil {
+					return fmt.Errorf("failed to send key: %w", err)
+				}
+			}
+
+			// Delay between characters
+			if charDelay > 0 {
+				time.Sleep(charDelay)
+			}
+		}
+
+		// Add space between words (except after last word)
+		if i < len(words)-1 {
+			// Type space character
+			sequence, err := layout.CharToKeySequence(ctx, ' ')
+			if err == nil {
+				for _, key := range sequence {
+					shift := (key.Modifier & layouts.ModShift) != 0
+					altGr := (key.Modifier & layouts.ModAltGr) != 0
+
+					if err := s.sendKeyWithModifiers(ctx, key.Keycode, shift, altGr); err != nil {
+						return fmt.Errorf("failed to send space: %w", err)
+					}
+				}
+			}
+
+			// Delay between words
+			if wordDelay > 0 {
+				time.Sleep(wordDelay)
+			}
+		}
+	}
+
+	return nil
 }
 
 // handleKey processes single key press command.

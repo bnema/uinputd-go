@@ -175,6 +175,15 @@ test-bench: ## Run benchmarks
 
 ##@ Development
 
+mocks: ## Generate mocks using mockery
+	@echo "$(BOLD)Generating mocks...$(RESET)"
+	@if ! command -v mockery &>/dev/null; then \
+		echo "$(YELLOW)$(ICON_WARNING)$(RESET)  mockery not found, install: go install github.com/vektra/mockery/v2@latest"; \
+		exit 1; \
+	fi
+	mockery
+	@echo "$(GREEN)$(ICON_CHECK)$(RESET) Mocks generated"
+
 fmt: ## Format code
 	@echo "$(BOLD)Formatting code...$(RESET)"
 	go fmt ./...

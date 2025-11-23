@@ -31,6 +31,9 @@ go.work.sum
 # Embedded files (generated during build)
 cmd/uinput-client/embedded/
 
+# Generated mocks
+**/mocks/
+
 # Temporary files
 *.tmp
 *.log
