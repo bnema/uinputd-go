@@ -7,11 +7,32 @@ import (
 )
 
 // DELayout implements German QWERTZ keyboard layout.
-type DELayout struct{}
+type DELayout struct {
+	baseMappings    map[rune]KeyMapping
+	deadKeyRegistry DeadKeyRegistry
+	deadKeys        map[rune]KeyMapping
+}
 
 // NewDE creates a new German QWERTZ layout.
 func NewDE() *DELayout {
-	return &DELayout{}
+	// Build the base mappings by merging shared and German-specific mappings
+	base := MergeKeymaps(
+		CommonMappings,         // Universal: space, tab, enter, €
+		StandardNumberMappings, // Numbers 0-9 without shift
+		deQWERTZLetters,        // QWERTZ letter layout (y/z swapped)
+		deShiftedSymbols,       // German shifted symbols
+		deUmlauts,              // German umlauts (ü, ö, ä, ß)
+		dePunctuation,          // German punctuation
+		deSymbols,              // German symbols
+		deAltGrSymbols,         // German AltGr combinations
+		deSpecialKeys,          // German special keys
+	)
+
+	return &DELayout{
+		baseMappings:    base,
+		deadKeyRegistry: BuildDeadKeyRegistry(),
+		deadKeys:        deDeadKeys,
+	}
 }
 
 // Name returns "de".
@@ -19,46 +40,45 @@ func (l *DELayout) Name() string {
 	return "de"
 }
 
-// CharToKeycode maps a character to its keycode in German QWERTZ layout.
-func (l *DELayout) CharToKeycode(ctx context.Context, char rune) (uint16, bool, bool, error) {
-	mapping, ok := deKeymapData[char]
-	if !ok {
-		return 0, false, false, &ErrCharNotSupported{Char: char, Layout: "de"}
+// CharToKeySequence converts a Unicode character to a sequence of keystrokes.
+func (l *DELayout) CharToKeySequence(ctx context.Context, char rune) ([]KeySequence, error) {
+	// First, check if it's a direct mapping
+	if mapping, ok := l.baseMappings[char]; ok {
+		return []KeySequence{{Keycode: mapping.Keycode, Modifier: mapping.Modifier}}, nil
 	}
 
-	shift := (mapping.Modifier & ModShift) != 0
-	altGr := (mapping.Modifier & ModAltGr) != 0
+	// Check if it needs a dead key combination
+	if comp, ok := l.deadKeyRegistry[char]; ok {
+		deadKeyMapping, hasDead := l.deadKeys[comp.DeadKey]
+		if !hasDead {
+			return nil, &ErrCharNotSupported{Char: char, Layout: "de"}
+		}
 
-	return mapping.Keycode, shift, altGr, nil
+		baseMapping, hasBase := l.baseMappings[comp.BaseChar]
+		if !hasBase {
+			return nil, &ErrCharNotSupported{Char: char, Layout: "de"}
+		}
+
+		return []KeySequence{
+			{Keycode: deadKeyMapping.Keycode, Modifier: deadKeyMapping.Modifier},
+			{Keycode: baseMapping.Keycode, Modifier: baseMapping.Modifier},
+		}, nil
+	}
+
+	return nil, &ErrCharNotSupported{Char: char, Layout: "de"}
 }
 
-// deKeymapData contains the complete German QWERTZ character-to-keycode mapping.
-var deKeymapData = map[rune]KeyMapping{
-	// Numbers (no shift)
-	'1': {Keycode: uinput.Key1, Modifier: ModNone},
-	'2': {Keycode: uinput.Key2, Modifier: ModNone},
-	'3': {Keycode: uinput.Key3, Modifier: ModNone},
-	'4': {Keycode: uinput.Key4, Modifier: ModNone},
-	'5': {Keycode: uinput.Key5, Modifier: ModNone},
-	'6': {Keycode: uinput.Key6, Modifier: ModNone},
-	'7': {Keycode: uinput.Key7, Modifier: ModNone},
-	'8': {Keycode: uinput.Key8, Modifier: ModNone},
-	'9': {Keycode: uinput.Key9, Modifier: ModNone},
-	'0': {Keycode: uinput.Key0, Modifier: ModNone},
+// deDeadKeys maps dead key symbols to their physical location on German QWERTZ keyboard.
+var deDeadKeys = map[rune]KeyMapping{
+	'^': {Keycode: uinput.KeyGrave, Modifier: ModNone},  // Circumflex
+	'´': {Keycode: uinput.KeyEqual, Modifier: ModNone},  // Acute
+	'`': {Keycode: uinput.KeyEqual, Modifier: ModShift}, // Grave
+}
 
-	// Shifted numbers (symbols)
-	'!': {Keycode: uinput.Key1, Modifier: ModShift},
-	'"': {Keycode: uinput.Key2, Modifier: ModShift},
-	'§': {Keycode: uinput.Key3, Modifier: ModShift},
-	'$': {Keycode: uinput.Key4, Modifier: ModShift},
-	'%': {Keycode: uinput.Key5, Modifier: ModShift},
-	'&': {Keycode: uinput.Key6, Modifier: ModShift},
-	'/': {Keycode: uinput.Key7, Modifier: ModShift},
-	'(': {Keycode: uinput.Key8, Modifier: ModShift},
-	')': {Keycode: uinput.Key9, Modifier: ModShift},
-	'=': {Keycode: uinput.Key0, Modifier: ModShift},
-
-	// QWERTZ letter layout (first row - note Z and Y swapped vs QWERTY)
+// deQWERTZLetters contains the QWERTZ letter layout.
+// In QWERTZ, Y and Z are swapped compared to QWERTY.
+var deQWERTZLetters = map[rune]KeyMapping{
+	// First row - standard except Y/Z swap
 	'q': {Keycode: uinput.KeyQ, Modifier: ModNone},
 	'Q': {Keycode: uinput.KeyQ, Modifier: ModShift},
 	'w': {Keycode: uinput.KeyW, Modifier: ModNone},
@@ -69,7 +89,7 @@ var deKeymapData = map[rune]KeyMapping{
 	'R': {Keycode: uinput.KeyR, Modifier: ModShift},
 	't': {Keycode: uinput.KeyT, Modifier: ModNone},
 	'T': {Keycode: uinput.KeyT, Modifier: ModShift},
-	'z': {Keycode: uinput.KeyY, Modifier: ModNone}, // Z is on Y key
+	'z': {Keycode: uinput.KeyY, Modifier: ModNone}, // Z on Y key
 	'Z': {Keycode: uinput.KeyY, Modifier: ModShift},
 	'u': {Keycode: uinput.KeyU, Modifier: ModNone},
 	'U': {Keycode: uinput.KeyU, Modifier: ModShift},
@@ -80,7 +100,7 @@ var deKeymapData = map[rune]KeyMapping{
 	'p': {Keycode: uinput.KeyP, Modifier: ModNone},
 	'P': {Keycode: uinput.KeyP, Modifier: ModShift},
 
-	// Second row
+	// Second row - standard
 	'a': {Keycode: uinput.KeyA, Modifier: ModNone},
 	'A': {Keycode: uinput.KeyA, Modifier: ModShift},
 	's': {Keycode: uinput.KeyS, Modifier: ModNone},
@@ -100,8 +120,8 @@ var deKeymapData = map[rune]KeyMapping{
 	'l': {Keycode: uinput.KeyL, Modifier: ModNone},
 	'L': {Keycode: uinput.KeyL, Modifier: ModShift},
 
-	// Third row
-	'y': {Keycode: uinput.KeyZ, Modifier: ModNone}, // Y is on Z key
+	// Third row - Y on Z key
+	'y': {Keycode: uinput.KeyZ, Modifier: ModNone}, // Y on Z key
 	'Y': {Keycode: uinput.KeyZ, Modifier: ModShift},
 	'x': {Keycode: uinput.KeyX, Modifier: ModNone},
 	'X': {Keycode: uinput.KeyX, Modifier: ModShift},
@@ -115,13 +135,24 @@ var deKeymapData = map[rune]KeyMapping{
 	'N': {Keycode: uinput.KeyN, Modifier: ModShift},
 	'm': {Keycode: uinput.KeyM, Modifier: ModNone},
 	'M': {Keycode: uinput.KeyM, Modifier: ModShift},
+}
 
-	// Special characters
-	' ':  {Keycode: uinput.KeySpace, Modifier: ModNone},
-	'\t': {Keycode: uinput.KeyTab, Modifier: ModNone},
-	'\n': {Keycode: uinput.KeyEnter, Modifier: ModNone},
+// deShiftedSymbols contains German shifted symbols on number row.
+var deShiftedSymbols = map[rune]KeyMapping{
+	'!': {Keycode: uinput.Key1, Modifier: ModShift},
+	'"': {Keycode: uinput.Key2, Modifier: ModShift},
+	'§': {Keycode: uinput.Key3, Modifier: ModShift},
+	'$': {Keycode: uinput.Key4, Modifier: ModShift},
+	'%': {Keycode: uinput.Key5, Modifier: ModShift},
+	'&': {Keycode: uinput.Key6, Modifier: ModShift},
+	'/': {Keycode: uinput.Key7, Modifier: ModShift},
+	'(': {Keycode: uinput.Key8, Modifier: ModShift},
+	')': {Keycode: uinput.Key9, Modifier: ModShift},
+	'=': {Keycode: uinput.Key0, Modifier: ModShift},
+}
 
-	// German umlauts and special chars
+// deUmlauts contains German umlauts and special characters with dedicated keys.
+var deUmlauts = map[rune]KeyMapping{
 	'ü': {Keycode: uinput.KeyLeftBrace, Modifier: ModNone},
 	'Ü': {Keycode: uinput.KeyLeftBrace, Modifier: ModShift},
 	'ö': {Keycode: uinput.KeySemicolon, Modifier: ModNone},
@@ -130,28 +161,30 @@ var deKeymapData = map[rune]KeyMapping{
 	'Ä': {Keycode: uinput.KeyApostrophe, Modifier: ModShift},
 	'ß': {Keycode: uinput.KeyMinus, Modifier: ModNone},
 	'?': {Keycode: uinput.KeyMinus, Modifier: ModShift},
+}
 
-	// Punctuation
+// dePunctuation contains German punctuation.
+var dePunctuation = map[rune]KeyMapping{
 	',': {Keycode: uinput.KeyComma, Modifier: ModNone},
 	';': {Keycode: uinput.KeyComma, Modifier: ModShift},
 	'.': {Keycode: uinput.KeyDot, Modifier: ModNone},
 	':': {Keycode: uinput.KeyDot, Modifier: ModShift},
 	'-': {Keycode: uinput.KeySlash, Modifier: ModNone},
 	'_': {Keycode: uinput.KeySlash, Modifier: ModShift},
+}
 
-	// Special symbols
+// deSymbols contains German symbols.
+var deSymbols = map[rune]KeyMapping{
 	'+':  {Keycode: uinput.KeyRightBrace, Modifier: ModNone},
 	'*':  {Keycode: uinput.KeyRightBrace, Modifier: ModShift},
 	'#':  {Keycode: uinput.KeyBackslash, Modifier: ModNone},
 	'\'': {Keycode: uinput.KeyBackslash, Modifier: ModShift},
-	'^':  {Keycode: uinput.KeyGrave, Modifier: ModNone},
-	'°':  {Keycode: uinput.KeyGrave, Modifier: ModShift},
-	'´':  {Keycode: uinput.KeyEqual, Modifier: ModNone},
-	'`':  {Keycode: uinput.KeyEqual, Modifier: ModShift},
+	'°':  {Keycode: uinput.KeyGrave, Modifier: ModShift}, // Also position of ^ dead key
+}
 
-	// AltGr combinations
+// deAltGrSymbols contains German AltGr combinations.
+var deAltGrSymbols = map[rune]KeyMapping{
 	'@':  {Keycode: uinput.KeyQ, Modifier: ModAltGr},
-	'€':  {Keycode: uinput.KeyE, Modifier: ModAltGr},
 	'~':  {Keycode: uinput.KeyRightBrace, Modifier: ModAltGr},
 	'|':  {Keycode: uinput.KeyGrave, Modifier: ModAltGr},
 	'{':  {Keycode: uinput.Key7, Modifier: ModAltGr},
@@ -159,6 +192,10 @@ var deKeymapData = map[rune]KeyMapping{
 	']':  {Keycode: uinput.Key9, Modifier: ModAltGr},
 	'}':  {Keycode: uinput.Key0, Modifier: ModAltGr},
 	'\\': {Keycode: uinput.KeyMinus, Modifier: ModAltGr},
-	'<':  {Keycode: uinput.Key102ND, Modifier: ModNone},
-	'>':  {Keycode: uinput.Key102ND, Modifier: ModShift},
+}
+
+// deSpecialKeys contains German special keys.
+var deSpecialKeys = map[rune]KeyMapping{
+	'<': {Keycode: uinput.Key102ND, Modifier: ModNone},
+	'>': {Keycode: uinput.Key102ND, Modifier: ModShift},
 }

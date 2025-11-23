@@ -7,11 +7,30 @@ import (
 )
 
 // FRLayout implements French AZERTY keyboard layout.
-type FRLayout struct{}
+type FRLayout struct {
+	baseMappings    map[rune]KeyMapping
+	deadKeyRegistry DeadKeyRegistry
+	deadKeys        map[rune]KeyMapping
+}
 
 // NewFR creates a new French AZERTY layout.
 func NewFR() *FRLayout {
-	return &FRLayout{}
+	// Build the base mappings by merging common and French-specific mappings
+	base := MergeKeymaps(
+		CommonMappings,       // Universal: space, tab, enter, €
+		frAZERTYLetters,      // AZERTY letter positions
+		frNumberRow,          // French number row (shifted)
+		frPrecomposedAccents, // Direct keys for é, è, à, ç, ù
+		frPunctuation,        // French punctuation layout
+		frAltGrSymbols,       // AltGr combinations
+		frRemainingSymbols,   // Other French-specific symbols
+	)
+
+	return &FRLayout{
+		baseMappings:    base,
+		deadKeyRegistry: BuildDeadKeyRegistry(),
+		deadKeys:        frDeadKeys,
+	}
 }
 
 // Name returns "fr".
@@ -19,50 +38,58 @@ func (l *FRLayout) Name() string {
 	return "fr"
 }
 
-// CharToKeycode maps a character to its keycode in French AZERTY layout.
-func (l *FRLayout) CharToKeycode(ctx context.Context, char rune) (uint16, bool, bool, error) {
-	mapping, ok := frKeymapData[char]
-	if !ok {
-		return 0, false, false, &ErrCharNotSupported{Char: char, Layout: "fr"}
+// CharToKeySequence converts a Unicode character to a sequence of keystrokes.
+func (l *FRLayout) CharToKeySequence(ctx context.Context, char rune) ([]KeySequence, error) {
+	// First, check if it's a direct mapping
+	if mapping, ok := l.baseMappings[char]; ok {
+		return []KeySequence{{Keycode: mapping.Keycode, Modifier: mapping.Modifier}}, nil
 	}
 
-	shift := (mapping.Modifier & ModShift) != 0
-	altGr := (mapping.Modifier & ModAltGr) != 0
+	// Check if it needs a dead key combination
+	if comp, ok := l.deadKeyRegistry[char]; ok {
+		// Get the dead key mapping for this layout
+		deadKeyMapping, hasDead := l.deadKeys[comp.DeadKey]
+		if !hasDead {
+			// This layout doesn't have this dead key
+			return nil, &ErrCharNotSupported{Char: char, Layout: "fr"}
+		}
 
-	return mapping.Keycode, shift, altGr, nil
+		// Get the base character mapping
+		baseMapping, hasBase := l.baseMappings[comp.BaseChar]
+		if !hasBase {
+			return nil, &ErrCharNotSupported{Char: char, Layout: "fr"}
+		}
+
+		// Return the sequence: dead key, then base character
+		return []KeySequence{
+			{Keycode: deadKeyMapping.Keycode, Modifier: deadKeyMapping.Modifier},
+			{Keycode: baseMapping.Keycode, Modifier: baseMapping.Modifier},
+		}, nil
+	}
+
+	return nil, &ErrCharNotSupported{Char: char, Layout: "fr"}
 }
 
-// frKeymapData contains the complete French AZERTY character-to-keycode mapping.
-var frKeymapData = map[rune]KeyMapping{
-	// Numbers (shifted in AZERTY!)
-	'1': {Keycode: uinput.Key1, Modifier: ModShift},
-	'2': {Keycode: uinput.Key2, Modifier: ModShift},
-	'3': {Keycode: uinput.Key3, Modifier: ModShift},
-	'4': {Keycode: uinput.Key4, Modifier: ModShift},
-	'5': {Keycode: uinput.Key5, Modifier: ModShift},
-	'6': {Keycode: uinput.Key6, Modifier: ModShift},
-	'7': {Keycode: uinput.Key7, Modifier: ModShift},
-	'8': {Keycode: uinput.Key8, Modifier: ModShift},
-	'9': {Keycode: uinput.Key9, Modifier: ModShift},
-	'0': {Keycode: uinput.Key0, Modifier: ModShift},
+// frDeadKeys maps dead key symbols to their physical location on French AZERTY keyboard.
+var frDeadKeys = map[rune]KeyMapping{
+	'^': {Keycode: uinput.KeyLeftBrace, Modifier: ModNone},  // Circumflex
+	'¨': {Keycode: uinput.KeyLeftBrace, Modifier: ModShift}, // Diaeresis
+}
 
-	// Unshifted symbols (AZERTY specific)
-	'&':  {Keycode: uinput.Key1, Modifier: ModNone},
-	'é':  {Keycode: uinput.Key2, Modifier: ModNone},
-	'"':  {Keycode: uinput.Key3, Modifier: ModNone},
-	'\'': {Keycode: uinput.Key4, Modifier: ModNone},
-	'(':  {Keycode: uinput.Key5, Modifier: ModNone},
-	'-':  {Keycode: uinput.Key6, Modifier: ModNone},
-	'è':  {Keycode: uinput.Key7, Modifier: ModNone},
-	'_':  {Keycode: uinput.Key8, Modifier: ModNone},
-	'ç':  {Keycode: uinput.Key9, Modifier: ModNone},
-	'à':  {Keycode: uinput.Key0, Modifier: ModNone},
-
-	// AZERTY letter layout (first row)
+// frAZERTYLetters contains the AZERTY letter layout.
+// Unlike QWERTY, several letters are in different positions:
+// - First row: a→Q, z→W
+// - Second row: q→A
+// - Third row: w→Z
+// - m is at Semicolon position
+var frAZERTYLetters = map[rune]KeyMapping{
+	// First row - AZERTY specific positions
 	'a': {Keycode: uinput.KeyQ, Modifier: ModNone},
 	'A': {Keycode: uinput.KeyQ, Modifier: ModShift},
 	'z': {Keycode: uinput.KeyW, Modifier: ModNone},
 	'Z': {Keycode: uinput.KeyW, Modifier: ModShift},
+
+	// First row - same as QWERTY
 	'e': {Keycode: uinput.KeyE, Modifier: ModNone},
 	'E': {Keycode: uinput.KeyE, Modifier: ModShift},
 	'r': {Keycode: uinput.KeyR, Modifier: ModNone},
@@ -80,9 +107,11 @@ var frKeymapData = map[rune]KeyMapping{
 	'p': {Keycode: uinput.KeyP, Modifier: ModNone},
 	'P': {Keycode: uinput.KeyP, Modifier: ModShift},
 
-	// AZERTY letter layout (second row)
+	// Second row - q is at KeyA position
 	'q': {Keycode: uinput.KeyA, Modifier: ModNone},
 	'Q': {Keycode: uinput.KeyA, Modifier: ModShift},
+
+	// Second row - same as QWERTY
 	's': {Keycode: uinput.KeyS, Modifier: ModNone},
 	'S': {Keycode: uinput.KeyS, Modifier: ModShift},
 	'd': {Keycode: uinput.KeyD, Modifier: ModNone},
@@ -99,12 +128,16 @@ var frKeymapData = map[rune]KeyMapping{
 	'K': {Keycode: uinput.KeyK, Modifier: ModShift},
 	'l': {Keycode: uinput.KeyL, Modifier: ModNone},
 	'L': {Keycode: uinput.KeyL, Modifier: ModShift},
+
+	// Second row - m is at Semicolon position
 	'm': {Keycode: uinput.KeySemicolon, Modifier: ModNone},
 	'M': {Keycode: uinput.KeySemicolon, Modifier: ModShift},
 
-	// AZERTY letter layout (third row)
+	// Third row - w is at KeyZ position
 	'w': {Keycode: uinput.KeyZ, Modifier: ModNone},
 	'W': {Keycode: uinput.KeyZ, Modifier: ModShift},
+
+	// Third row - same as QWERTY
 	'x': {Keycode: uinput.KeyX, Modifier: ModNone},
 	'X': {Keycode: uinput.KeyX, Modifier: ModShift},
 	'c': {Keycode: uinput.KeyC, Modifier: ModNone},
@@ -115,13 +148,48 @@ var frKeymapData = map[rune]KeyMapping{
 	'B': {Keycode: uinput.KeyB, Modifier: ModShift},
 	'n': {Keycode: uinput.KeyN, Modifier: ModNone},
 	'N': {Keycode: uinput.KeyN, Modifier: ModShift},
+}
 
-	// Special characters
-	' ':  {Keycode: uinput.KeySpace, Modifier: ModNone},
-	'\t': {Keycode: uinput.KeyTab, Modifier: ModNone},
-	'\n': {Keycode: uinput.KeyEnter, Modifier: ModNone},
+// frNumberRow contains the French AZERTY number row.
+// In French AZERTY, numbers require SHIFT, and symbols are unshifted.
+var frNumberRow = map[rune]KeyMapping{
+	// Shifted numbers
+	'1': {Keycode: uinput.Key1, Modifier: ModShift},
+	'2': {Keycode: uinput.Key2, Modifier: ModShift},
+	'3': {Keycode: uinput.Key3, Modifier: ModShift},
+	'4': {Keycode: uinput.Key4, Modifier: ModShift},
+	'5': {Keycode: uinput.Key5, Modifier: ModShift},
+	'6': {Keycode: uinput.Key6, Modifier: ModShift},
+	'7': {Keycode: uinput.Key7, Modifier: ModShift},
+	'8': {Keycode: uinput.Key8, Modifier: ModShift},
+	'9': {Keycode: uinput.Key9, Modifier: ModShift},
+	'0': {Keycode: uinput.Key0, Modifier: ModShift},
 
-	// Punctuation and symbols
+	// Unshifted symbols on number row
+	'&': {Keycode: uinput.Key1, Modifier: ModNone},
+	// Note: é is in frPrecomposedAccents (Key2, ModNone)
+	'"':  {Keycode: uinput.Key3, Modifier: ModNone},
+	'\'': {Keycode: uinput.Key4, Modifier: ModNone},
+	'(':  {Keycode: uinput.Key5, Modifier: ModNone},
+	'-':  {Keycode: uinput.Key6, Modifier: ModNone},
+	// Note: è is in frPrecomposedAccents (Key7, ModNone)
+	'_': {Keycode: uinput.Key8, Modifier: ModNone},
+	// Note: ç is in frPrecomposedAccents (Key9, ModNone)
+	// Note: à is in frPrecomposedAccents (Key0, ModNone)
+}
+
+// frPrecomposedAccents contains French characters that have dedicated keys
+// (not requiring dead key combinations).
+var frPrecomposedAccents = map[rune]KeyMapping{
+	'é': {Keycode: uinput.Key2, Modifier: ModNone},
+	'è': {Keycode: uinput.Key7, Modifier: ModNone},
+	'à': {Keycode: uinput.Key0, Modifier: ModNone},
+	'ç': {Keycode: uinput.Key9, Modifier: ModNone},
+	'ù': {Keycode: uinput.KeyApostrophe, Modifier: ModNone},
+}
+
+// frPunctuation contains French punctuation layout.
+var frPunctuation = map[rune]KeyMapping{
 	',': {Keycode: uinput.KeyM, Modifier: ModNone},
 	'?': {Keycode: uinput.KeyM, Modifier: ModShift},
 	';': {Keycode: uinput.KeyComma, Modifier: ModNone},
@@ -129,8 +197,10 @@ var frKeymapData = map[rune]KeyMapping{
 	':': {Keycode: uinput.KeyDot, Modifier: ModNone},
 	'/': {Keycode: uinput.KeyDot, Modifier: ModShift},
 	'!': {Keycode: uinput.KeySlash, Modifier: ModNone},
+}
 
-	// Brackets and special (with AltGr)
+// frAltGrSymbols contains symbols accessible with AltGr.
+var frAltGrSymbols = map[rune]KeyMapping{
 	'[':  {Keycode: uinput.Key5, Modifier: ModAltGr},
 	']':  {Keycode: uinput.KeyMinus, Modifier: ModAltGr},
 	'{':  {Keycode: uinput.Key4, Modifier: ModAltGr},
@@ -141,18 +211,19 @@ var frKeymapData = map[rune]KeyMapping{
 	'\\': {Keycode: uinput.Key8, Modifier: ModAltGr},
 	'|':  {Keycode: uinput.Key6, Modifier: ModAltGr},
 	'`':  {Keycode: uinput.Key7, Modifier: ModAltGr},
+}
 
-	// Remaining symbols
+// frRemainingSymbols contains other French-specific symbols.
+var frRemainingSymbols = map[rune]KeyMapping{
 	'°': {Keycode: uinput.KeyMinus, Modifier: ModShift},
 	')': {Keycode: uinput.KeyEqual, Modifier: ModNone},
 	'=': {Keycode: uinput.KeyEqual, Modifier: ModShift},
-	'^': {Keycode: uinput.KeyLeftBrace, Modifier: ModNone},
-	'¨': {Keycode: uinput.KeyLeftBrace, Modifier: ModShift},
+	'^': {Keycode: uinput.KeyLeftBrace, Modifier: ModNone},  // Also a dead key
+	'¨': {Keycode: uinput.KeyLeftBrace, Modifier: ModShift}, // Also a dead key
 	'$': {Keycode: uinput.KeyRightBrace, Modifier: ModNone},
 	'£': {Keycode: uinput.KeyRightBrace, Modifier: ModShift},
 	'*': {Keycode: uinput.KeyBackslash, Modifier: ModNone},
 	'µ': {Keycode: uinput.KeyBackslash, Modifier: ModShift},
-	'ù': {Keycode: uinput.KeyApostrophe, Modifier: ModNone},
 	'%': {Keycode: uinput.KeyApostrophe, Modifier: ModShift},
 	'<': {Keycode: uinput.KeyGrave, Modifier: ModNone},
 	'>': {Keycode: uinput.KeyGrave, Modifier: ModShift},

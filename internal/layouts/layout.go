@@ -5,15 +5,25 @@ import (
 	"fmt"
 )
 
+// KeySequence represents a single keystroke with its modifiers.
+// For simple characters, a sequence contains one keystroke.
+// For dead key combinations, a sequence contains multiple keystrokes
+// (e.g., circumflex key, then vowel key).
+type KeySequence struct {
+	Keycode  uint16
+	Modifier Modifier
+}
+
 // Layout defines the interface for keyboard layout implementations.
 // Each layout maps Unicode characters to Linux keycodes with appropriate modifiers.
 type Layout interface {
 	// Name returns the layout identifier (e.g., "us", "fr").
 	Name() string
 
-	// CharToKeycode converts a Unicode character to a keycode and modifier flags.
-	// Returns the keycode, whether Shift is needed, whether AltGr is needed, and any error.
-	CharToKeycode(ctx context.Context, char rune) (keycode uint16, shift, altGr bool, err error)
+	// CharToKeySequence converts a Unicode character to a sequence of keystrokes.
+	// For simple characters, returns a single-element slice.
+	// For dead key combinations (like ô = ^ + o), returns multiple keystrokes.
+	CharToKeySequence(ctx context.Context, char rune) ([]KeySequence, error)
 }
 
 // Modifier represents keyboard modifiers.

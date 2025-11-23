@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/bnema/uinputd-go/internal/layouts"
 	"github.com/bnema/uinputd-go/internal/logger"
 	"github.com/bnema/uinputd-go/internal/protocol"
 	"github.com/bnema/uinputd-go/internal/uinput"
@@ -53,15 +54,22 @@ func (s *Server) handleType(ctx context.Context, payload json.RawMessage) error 
 
 	// Type each character
 	for _, char := range p.Text {
-		keycode, shift, altGr, err := layout.CharToKeycode(ctx, char)
+		sequence, err := layout.CharToKeySequence(ctx, char)
 		if err != nil {
 			log.Warn("character not supported", "char", string(char), "error", err)
 			continue // Skip unsupported characters
 		}
 
-		// Send key event with modifiers
-		if err := s.sendKeyWithModifiers(ctx, keycode, shift, altGr); err != nil {
-			return fmt.Errorf("failed to send key: %w", err)
+		// Send each keystroke in the sequence
+		// For simple characters, sequence has one element
+		// For dead key combinations, sequence has multiple elements (e.g., circumflex + vowel)
+		for _, key := range sequence {
+			shift := (key.Modifier & layouts.ModShift) != 0
+			altGr := (key.Modifier & layouts.ModAltGr) != 0
+
+			if err := s.sendKeyWithModifiers(ctx, key.Keycode, shift, altGr); err != nil {
+				return fmt.Errorf("failed to send key: %w", err)
+			}
 		}
 	}
 
