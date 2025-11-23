@@ -16,7 +16,10 @@ import (
 )
 
 var (
-	version    = "dev"
+	version   = "dev"
+	commit    = "unknown"
+	buildTime = "unknown"
+
 	configPath string
 )
 
@@ -41,9 +44,20 @@ Features:
 	RunE: runDaemon,
 }
 
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print version information",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("uinputd %s\n", version)
+		fmt.Printf("  commit:     %s\n", commit)
+		fmt.Printf("  build time: %s\n", buildTime)
+	},
+}
+
 func init() {
 	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "config file path")
 	rootCmd.Version = version
+	rootCmd.AddCommand(versionCmd)
 }
 
 func runDaemon(cmd *cobra.Command, args []string) error {
