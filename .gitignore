@@ -37,3 +37,9 @@ cmd/uinput-client/embedded/
 # Temporary files
 *.tmp
 *.log
+
+# Markdown files at root (except README, CHANGELOG, LICENSE)
+/*.md
+!README.md
+!CHANGELOG.md
+!LICENSE.md
